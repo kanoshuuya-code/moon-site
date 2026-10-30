@@ -1,0 +1,59 @@
+TO YY · 月亮小站 —— 云端同步指南（信箱双向同步）
+════════════════════════════════════════════════
+配好之后：你手机写的信她立刻能看到，她写的你也能看到。
+全程免费，大约 15 分钟。
+
+第一步：注册 Supabase（云端数据库）
+1. 打开 https://supabase.com
+2. 点「Start your project」→ 用邮箱或 GitHub 账号注册
+3. 进后台后点「New project」
+   - Name：随便填，比如 moon-letters
+   - Database Password：随便设一个（自己记住就行，网站用不到它）
+   - Region：选 Singapore（新加坡，离得近速度快）
+   - 点 Create，等 1-2 分钟项目建好
+
+第二步：建一张存信的表
+1. 左侧菜单点「SQL Editor」→「New query」
+2. 把下面这段完整复制粘贴进去，点右下角「Run」：
+
+create table moon_letters (
+  id uuid default gen_random_uuid() primary key,
+  text text not null,
+  when_text text,
+  created_at timestamptz default now()
+);
+alter table moon_letters enable row level security;
+create policy "read"  on moon_letters for select using (true);
+create policy "write" on moon_letters for insert with check (true);
+create policy "del"   on moon_letters for delete using (true);
+
+3. 看到「Success」就成功了
+
+第三步：拿到两串钥匙，填进配置文件
+1. 左侧菜单最下面齿轮「Project Settings」→ 点「API」
+2. 页面上有两个东西：
+   - Project URL（https://xxxx.supabase.co 这样一串）
+   - anon public key（eyJ 开头的很长一串）
+3. 用记事本打开 moon-site\moon-config.js
+4. 把两串分别填进引号里，保存：
+
+window.MAILBOX_CLOUD = {
+  url: "https://你的项目.supabase.co",
+  key: "eyJ你的anon公钥",
+  table: "moon_letters"
+};
+
+第四步：验证
+1. 双击「启动小站.bat」打开网站
+2. 进「信箱」页 → 底部应显示「· 云端信箱已连接 ·」
+3. 写一封测试信 → 回 Supabase 左侧「Table Editor」→
+   moon_letters 表里应该能看到这条
+
+注意
+· 这个 key 是公开级别的（网页必须带它），
+  任何拿到网址+key 的人都能读写信箱，
+  所以别把网站链接公开发到社交平台，私下发给她就好
+· 没配置或云端连不上时，信箱自动退回「只存本机」，
+  网站照常能用，不会报错
+
+配好之后：去看「部署上线指南.txt」把网站挂到网上
