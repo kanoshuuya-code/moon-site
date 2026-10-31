@@ -1018,6 +1018,7 @@ function showPage(id){
   for(var j=0;j<tabs.length;j++) tabs[j].classList.toggle("active", tabs[j].getAttribute("href")==="#"+id);
   window.scrollTo(0,0);
   if(id==="journal") loadJournal();
+  if(id==="wishes"&&window.__syncWishes) window.__syncWishes();
   if(id==="mail"&&window.__loadLetters) window.__loadLetters();
 }
 window.addEventListener("hashchange",function(){ showPage(location.hash.replace("#","")); });
@@ -1540,7 +1541,7 @@ async function loadJournal(force){
 }
 document.getElementById("journalReload").addEventListener("click",function(){ loadJournal(true); });
 
-/* ───────── 愿望清单 ───────── */
+/* ───────── 愿望清单（云端同步：配好 Supabase 后双方共享） ───────── */
 (function wishes(){
   var DEFAULTS=[
     "一起读完《白夜行》，交换读后感",
@@ -1554,6 +1555,65 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
   if(!Array.isArray(list)||!list.length){ list=DEFAULTS.map(function(t){return {t:t,done:false};}); }
   var ul=document.getElementById("wishList"), input=document.getElementById("wishInput");
 
+  var CLOUD=null;
+  try{
+    var c=window.MAILBOX_CLOUD;
+    if(c&&c.url&&c.key&&/^https:\/\//.test(c.url)) CLOUD={url:c.url.replace(/\/+$/,""),key:c.key,table:"moon_wishes"};
+  }catch(e){}
+  var cloudSynced=false;
+
+  async function wPull(){
+    var r=await fetch(CLOUD.url+"/rest/v1/"+CLOUD.table+"?select=id,text,done&order=created_at.asc&limit=300",
+      {headers:cloudHeaders(CLOUD.key),cache:"no-store"});
+    if(!r.ok) throw new Error("pull "+r.status);
+    return await r.json();
+  }
+  async function wAdd(t,done){
+    var r=await fetch(CLOUD.url+"/rest/v1/"+CLOUD.table,{
+      method:"POST",
+      headers:cloudHeaders(CLOUD.key,{"Content-Type":"application/json",Prefer:"return=representation"}),
+      body:JSON.stringify({text:t,done:!!done})});
+    if(!r.ok) throw new Error("add "+r.status);
+    var rows=await r.json();
+    return rows&&rows[0]?rows[0].id:null;
+  }
+  async function wPatchByText(t,done){
+    await fetch(CLOUD.url+"/rest/v1/"+CLOUD.table+"?text=eq."+encodeURIComponent(t),
+      {method:"PATCH",headers:cloudHeaders(CLOUD.key,{"Content-Type":"application/json"}),
+       body:JSON.stringify({done:!!done})});
+  }
+  async function wDelByText(t){
+    await fetch(CLOUD.url+"/rest/v1/"+CLOUD.table+"?text=eq."+encodeURIComponent(t),
+      {method:"DELETE",headers:cloudHeaders(CLOUD.key)});
+  }
+
+  async function syncWishes(force){
+    if(!CLOUD) return;
+    if(cloudSynced&&!force) return;
+    try{
+      var rows=await wPull();
+      var merged=[],seen={};
+      rows.forEach(function(r){
+        if(!r.text) return;
+        var k="t:"+r.text; if(seen[k]) return; seen[k]=1;
+        merged.push({t:r.text,done:!!r.done,id:r.id});
+      });
+      list.forEach(function(w){
+        var k="t:"+w.t; if(seen[k]) return; seen[k]=1;
+        merged.push({t:w.t,done:!!w.done});
+      });
+      list=merged; store.set("yy_wishes",list);
+      // 本地多出来的（云端没有的）推上云端
+      for(var i=0;i<list.length;i++){
+        if(!list[i].id){ try{ list[i].id=await wAdd(list[i].t,list[i].done); }catch(e){} }
+      }
+      store.set("yy_wishes",list);
+      cloudSynced=true;
+      render();
+    }catch(e){}
+  }
+  window.__syncWishes=syncWishes;
+
   function render(){
     ul.innerHTML="";
     list.forEach(function(w,i){
@@ -1564,9 +1624,17 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
       var tick=document.createElement("span"); tick.className="tick"; tick.textContent="✓";
       var wt=document.createElement("span"); wt.className="wt"; wt.textContent=w.t; wt.style.flex="1";
       lab.appendChild(box); lab.appendChild(tick); lab.appendChild(wt);
-      box.addEventListener("change",function(){ list[i].done=box.checked; store.set("yy_wishes",list); });
+      box.addEventListener("change",function(){
+        list[i].done=box.checked; store.set("yy_wishes",list);
+        if(CLOUD){ wPatchByText(list[i].t,list[i].done); }
+      });
       var del=document.createElement("span"); del.className="del"; del.textContent="×"; del.title="删掉这个愿望";
-      del.addEventListener("click",function(e){ e.stopPropagation(); list.splice(i,1); store.set("yy_wishes",list); render(); });
+      del.addEventListener("click",function(e){
+        e.stopPropagation();
+        var removed=list.splice(i,1)[0];
+        store.set("yy_wishes",list); render();
+        if(CLOUD&&removed){ wDelByText(removed.t); }
+      });
       li.appendChild(lab); li.appendChild(del);
       ul.appendChild(li);
     });
@@ -1579,6 +1647,7 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
     store.set("yy_wishes",list);
     input.value="";
     render();
+    if(CLOUD){ wAdd(t,false); }
   });
   render();
 })();
