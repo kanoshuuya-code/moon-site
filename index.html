@@ -1272,6 +1272,14 @@ var store={
   set:function(k,v){ try{ localStorage.setItem(k,JSON.stringify(v)); }catch(e){} }
 };
 
+/* 云端请求头：新版 sb_publishable_ 密钥只走 apikey；旧版 eyJ 密钥两种都带 */
+function cloudHeaders(key,extra){
+  var h={apikey:key};
+  if(!/^sb_/.test(key)) h.Authorization="Bearer "+key;
+  if(extra) for(var k in extra) h[k]=extra[k];
+  return h;
+}
+
 /* ───────── 手账：读取 stories/*.txt ───────── */
 function esc(s){
   return String(s).replace(/[&<>"']/g,function(c){
@@ -1426,7 +1434,7 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
   /* ── 云端读写（Supabase REST） ── */
   async function cloudList(){
     var r=await fetch(CLOUD.url+"/rest/v1/"+CLOUD.table+"?select=id,text,when_text,created_at&order=created_at.desc&limit=300",
-      {headers:{apikey:CLOUD.key,Authorization:"Bearer "+CLOUD.key},cache:"no-store"});
+      {headers:cloudHeaders(CLOUD.key),cache:"no-store"});
     if(!r.ok) throw new Error("list "+r.status);
     var rows=await r.json();
     return rows.map(function(x){return {id:x.id,text:x.text,when:x.when_text||""};});
@@ -1434,7 +1442,7 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
   async function cloudAdd(n){
     var r=await fetch(CLOUD.url+"/rest/v1/"+CLOUD.table,{
       method:"POST",
-      headers:{apikey:CLOUD.key,Authorization:"Bearer "+CLOUD.key,"Content-Type":"application/json",Prefer:"return=representation"},
+      headers:cloudHeaders(CLOUD.key,{"Content-Type":"application/json",Prefer:"return=representation"}),
       body:JSON.stringify({text:n.text,when_text:n.when})});
     if(!r.ok) throw new Error("add "+r.status);
     var rows=await r.json();
@@ -1443,7 +1451,7 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
   async function cloudDelete(id){
     try{
       await fetch(CLOUD.url+"/rest/v1/"+CLOUD.table+"?id=eq."+encodeURIComponent(id),
-        {method:"DELETE",headers:{apikey:CLOUD.key,Authorization:"Bearer "+CLOUD.key}});
+        {method:"DELETE",headers:cloudHeaders(CLOUD.key)});
     }catch(e){}
   }
   var cloudLoaded=false;
@@ -1574,8 +1582,8 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
     try{
       await fetch(CLOUD.url+"/rest/v1/site_photos?on_conflict=key",{
         method:"POST",
-        headers:{apikey:CLOUD.key,Authorization:"Bearer "+CLOUD.key,"Content-Type":"application/json",
-          Prefer:"resolution=merge-duplicates"},
+        headers:cloudHeaders(CLOUD.key,{"Content-Type":"application/json",
+          Prefer:"resolution=merge-duplicates"}),
         body:JSON.stringify({key:key,data:data})});
     }catch(e){}
   }
@@ -1583,14 +1591,14 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
     if(!CLOUD)return;
     try{
       await fetch(CLOUD.url+"/rest/v1/site_photos?key=eq."+encodeURIComponent(key),
-        {method:"DELETE",headers:{apikey:CLOUD.key,Authorization:"Bearer "+CLOUD.key}});
+        {method:"DELETE",headers:cloudHeaders(CLOUD.key)});
     }catch(e){}
   }
   async function pullCloud(){
     if(!CLOUD)return;
     try{
       var r=await fetch(CLOUD.url+"/rest/v1/site_photos?select=key,data",{
-        headers:{apikey:CLOUD.key,Authorization:"Bearer "+CLOUD.key},cache:"no-store"});
+        headers:cloudHeaders(CLOUD.key),cache:"no-store"});
       if(!r.ok)return;
       var rows=await r.json()||[];
       var changed=false;
