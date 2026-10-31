@@ -366,6 +366,22 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
   text-shadow:0 0 26px rgba(232,214,166,.55)}
 .press-msg.show{opacity:1;transform:scale(1)}
 
+/* ── 庆典特效：闪屏 / 冲击波 / 烟花 ── */
+.press-flash{position:fixed;inset:0;z-index:110;pointer-events:none;opacity:0;
+  background:radial-gradient(circle at 50% 45%, rgba(240,230,200,.4), rgba(232,214,166,.15) 45%, transparent 72%);
+  transition:opacity .3s ease}
+.press-flash.on{opacity:1}
+.shockwave{position:fixed;width:130px;height:130px;border:1.5px solid rgba(232,214,166,.55);border-radius:50%;
+  pointer-events:none;z-index:120;animation:shock .95s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes shock{from{transform:scale(.35);opacity:.8}to{transform:scale(6.5);opacity:0}}
+.fwp{position:fixed;width:5px;height:5px;border-radius:50%;pointer-events:none;z-index:120;
+  animation:fwp 1.15s cubic-bezier(.15,.6,.4,1) forwards}
+@keyframes fwp{
+  0%{transform:translate(0,0) scale(1);opacity:1}
+  65%{opacity:.95}
+  100%{transform:translate(var(--dx),var(--dy)) scale(.25);opacity:0}
+}
+
 /* ── 响应式 ── */
 @media (max-width:900px){
   nav{left:10px;right:10px;transform:none;overflow-x:auto;justify-content:flex-start;scrollbar-width:none}
@@ -407,6 +423,7 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
   <div class="intro-cap">点一下月亮</div>
   <button class="intro-skip" id="introSkip">先直接进入 →</button>
 </div>
+<div class="press-flash" id="pressFlash"></div>
 <script>try{var _f=(location.search+location.hash).indexOf("intro")>=0;if(!_f&&sessionStorage.getItem("yy_intro")==="1"){var _it=document.getElementById("intro");_it.style.display="none";}}catch(e){}</script>
 
 <nav id="topnav">
@@ -967,12 +984,17 @@ function daysBetween(a,b){
   sky.appendChild(frag);
 })();
 
-/* ───────── 流星 ───────── */
-function spawnMeteor(){
+/* ───────── 流星（opt.big = 加大加亮的火流星，opt.fast = 高速版） ───────── */
+function spawnMeteor(opt){
+  opt=opt||{};
+  var sky=document.getElementById("sky");
+  if(!sky||sky.children.length>60) return;
   var m=document.createElement("i"); m.className="meteor";
-  m.style.left=(4+Math.random()*70)+"%";
-  m.style.top=(3+Math.random()*34)+"%";
-  document.getElementById("sky").appendChild(m);
+  if(opt.big){ m.style.height="190px"; m.style.width="3.5px"; }
+  m.style.left=(2+Math.random()*82)+"%";
+  m.style.top=(2+Math.random()*40)+"%";
+  if(opt.fast) m.style.animationDuration="0.9s";
+  sky.appendChild(m);
   setTimeout(function(){ m.remove(); },2100);
 }
 (function meteorLoop(){
@@ -1895,8 +1917,10 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
   var label=document.getElementById("pressLabel");
   if(!ringEl||!fill) return;
 
-  var HOLD=3000, t0=0, rafId=0, holding=false, fired=false;
-  var WORDS=[
+  var HOLD=3000, t0=0, rafId=0, holding=false;
+  function cl(x){ return x<0?0:x>1?1:x; }
+  // 情话优先读 timeline.js 的 PRESS_WORDS，没有就用这里的默认
+  var DEF_WORDS=[
     "晚安，姚悦。",
     "今天也要开心呀。",
     "月亮很亮，亮也没用，没用也亮。我喜欢你，喜欢也没用，没用也喜欢。",
@@ -1905,10 +1929,12 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
     "有事随时找我，我一直在。",
     "往后的日子，都是好日子。"
   ];
+  var WORDS=(Array.isArray(window.PRESS_WORDS)&&window.PRESS_WORDS.length)
+    ? window.PRESS_WORDS : DEF_WORDS;
 
   function progressTick(){
     rafId=requestAnimationFrame(progressTick);
-    var k=clamp01((performance.now()-t0)/HOLD);
+    var k=cl((performance.now()-t0)/HOLD);
     fill.style.strokeDashoffset=440*(1-k);
     if(performance.now()-t0>=HOLD){
       holding=false; ringEl.classList.remove("holding");
@@ -1919,18 +1945,70 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
     fill.style.strokeDashoffset=440; }
 
   function fire(){
-    if(fired) { fired=false; }
-    // 满屏流星爆发：8 秒内持续刷出
-    var n=0, iv=setInterval(function(){
-      spawnMeteor(); n++;
-      if(Math.random()<0.55) spawnMeteor();
-      if(n>=22){ clearInterval(iv); }
-    },180);
+    // 金色闪屏 + 从按钮荡开的冲击波
+    flashScreen();
+    var rect=ringEl.getBoundingClientRect();
+    shockwave(rect.left+rect.width/2, rect.top+rect.height/2);
+    setTimeout(function(){ shockwave(rect.left+rect.width/2, rect.top+rect.height/2); },260);
+    // 四波流星雨：78 颗，一波比一波盛大
+    spawnBurst(16,{big:true});
+    setTimeout(function(){ spawnBurst(20); },450);
+    setTimeout(function(){ spawnBurst(24,{big:true,fast:true}); },950);
+    setTimeout(function(){ spawnBurst(18,{fast:true}); },1450);
+    // 天幕烟花：8 处依次绽放
+    var fwT=[80,340,620,900,1180,1480,1800,2100];
+    for(var wi=0;wi<fwT.length;wi++){
+      (function(t,i){
+        setTimeout(function(){
+          firework(window.innerWidth*(0.15+Math.random()*0.7),
+                   window.innerHeight*(0.08+Math.random()*0.3));
+        },t);
+      })(wi);
+    }
     // 一句话
     msg.textContent=WORDS[(Math.random()*WORDS.length)|0];
     msg.classList.add("show");
     setTimeout(function(){ msg.classList.remove("show"); },5200);
     label.textContent="想按几次都可以 · 这里的流星为你下";
+  }
+  function spawnBurst(n,opt){
+    for(var i=0;i<n;i++){
+      setTimeout(function(){ spawnMeteor(opt); },Math.random()*650);
+    }
+  }
+  function flashScreen(){
+    var f=document.getElementById("pressFlash");
+    if(!f) return;
+    f.classList.add("on");
+    setTimeout(function(){ f.classList.remove("on"); },300);
+  }
+  function shockwave(x,y){
+    var s=document.createElement("i"); s.className="shockwave";
+    s.style.left=(x-65)+"px"; s.style.top=(y-65)+"px";
+    document.body.appendChild(s);
+    setTimeout(function(){ s.remove(); },1000);
+  }
+  function firework(x,y){
+    var cols=["#f2ead6","#e8d6a6","#ffd9a0","#fff6e0","#d6bc80"];
+    var n=16+((Math.random()*8)|0);
+    for(var i=0;i<n;i++){
+      var ang=(i/n)*6.2832+Math.random()*0.4;
+      var dist=42+Math.random()*74;
+      var p=document.createElement("i"); p.className="fwp";
+      p.style.left=x+"px"; p.style.top=y+"px";
+      p.style.background=cols[(Math.random()*cols.length)|0];
+      p.style.setProperty("--dx",(Math.cos(ang)*dist).toFixed(1)+"px");
+      p.style.setProperty("--dy",(Math.sin(ang)*dist+16).toFixed(1)+"px");
+      p.style.animationDelay=(Math.random()*0.08).toFixed(2)+"s";
+      document.body.appendChild(p);
+      setTimeout(function(el){ return function(){ el.remove(); }; }(p),1400);
+    }
+    var core=document.createElement("i"); core.className="fwp";
+    core.style.left=x+"px"; core.style.top=y+"px";
+    core.style.width="9px"; core.style.height="9px"; core.style.background="#fff8e6";
+    core.style.setProperty("--dx","0px"); core.style.setProperty("--dy","7px");
+    document.body.appendChild(core);
+    setTimeout(function(){ core.remove(); },1400);
   }
   function startHold(){ if(holding) return;
     holding=true; ringEl.classList.add("holding");
