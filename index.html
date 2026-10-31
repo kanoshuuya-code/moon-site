@@ -690,6 +690,10 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
     <div class="pa-grid" id="paGridPhotos"></div>
     <div class="pa-sec">页面贴纸</div>
     <div class="pa-grid" id="paGridStickers"></div>
+    <div class="pa-actions" style="margin-top:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <button class="btn" id="paSyncAll">把本机照片全部同步到云端</button>
+      <span class="tiny-note" id="paSyncMsg"></span>
+    </div>
   </div>
 </div>
 <input type="file" id="paFile" accept="image/*" style="display:none">
@@ -1578,14 +1582,17 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
   function saveOverrides(){ try{ store.set(KEY,overrides); }catch(e){} }
 
   async function pushCloud(key,data){
-    if(!CLOUD)return;
-    try{
-      await fetch(CLOUD.url+"/rest/v1/site_photos?on_conflict=key",{
-        method:"POST",
-        headers:cloudHeaders(CLOUD.key,{"Content-Type":"application/json",
-          Prefer:"resolution=merge-duplicates"}),
-        body:JSON.stringify({key:key,data:data})});
-    }catch(e){}
+    if(!CLOUD) throw new Error("未配置云端");
+    var r=await fetch(CLOUD.url+"/rest/v1/site_photos?on_conflict=key",{
+      method:"POST",
+      headers:cloudHeaders(CLOUD.key,{"Content-Type":"application/json",
+        Prefer:"resolution=merge-duplicates"}),
+      body:JSON.stringify({key:key,data:data})});
+    if(!r.ok){
+      var detail="";
+      try{ detail=await r.text(); }catch(e){}
+      throw new Error("HTTP "+r.status+(detail?" "+detail.slice(0,120):""));
+    }
   }
   async function delCloud(key){
     if(!CLOUD)return;
@@ -1670,14 +1677,41 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
       : "当前只在你这台设备生效：配好 moon-config.js 云端后，换完所有人可见 · 点任意一格上传";
   }
 
+  function paMsg(msg,ok){
+    var el=document.getElementById("paSyncMsg");
+    if(!el)return;
+    el.textContent=msg||"";
+    el.style.color=ok===false?"#d98a7e":"var(--mist)";
+  }
   if(fileInput){
     fileInput.addEventListener("change",function(){
       var f=fileInput.files&&fileInput.files[0];
       if(!f||!pendingKey)return;
       var key=pendingKey; pendingKey=null;
-      downsample(f,function(dataUrl){ setOverride(key,dataUrl); pushCloud(key,dataUrl); });
+      downsample(f,function(dataUrl){
+        setOverride(key,dataUrl);
+        pushCloud(key,dataUrl).then(function(){
+          paMsg("已同步到云端 ✅",true);
+        }).catch(function(e){
+          paMsg("已存本机，但云端同步失败："+(e&&e.message?e.message:"")+" · 可点下方按钮重试",false);
+        });
+      });
     });
   }
+  var syncBtn=document.getElementById("paSyncAll");
+  if(syncBtn) syncBtn.addEventListener("click",async function(){
+    if(!CLOUD){ paMsg("还没配置云端（moon-config.js）",false); return; }
+    var keys=Object.keys(overrides).filter(function(k){ return !!overrides[k]; });
+    if(!keys.length){ paMsg("本机还没有换过照片",false); return; }
+    paMsg("同步中… 0/"+keys.length);
+    var ok=0,fail=0,lastErr="";
+    for(var i=0;i<keys.length;i++){
+      try{ await pushCloud(keys[i],overrides[keys[i]]); ok++; }
+      catch(e){ fail++; lastErr=e&&e.message?e.message:""; }
+      paMsg("同步中… "+(i+1)+"/"+keys.length);
+    }
+    paMsg(fail? "完成 "+ok+" 张，失败 "+fail+" 张："+lastErr : "已同步 "+ok+" 张到云端 ✅",!fail);
+  });
   document.getElementById("photoAdminBtn").addEventListener("click",function(){
     buildPanel(); document.getElementById("photoAdmin").hidden=false;
   });
