@@ -338,6 +338,34 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
   cursor:pointer;opacity:0;transition:.2s}
 .pa-cell:hover .pa-reset{opacity:1}
 
+/* ── 给姚悦的专属按钮 ── */
+.wish-section{position:relative;max-width:720px;margin:0 auto;background:var(--card);
+  border:1px solid var(--card-line);border-radius:16px;padding:38px clamp(22px,5vw,46px) 34px;
+  backdrop-filter:blur(4px);text-align:center}
+.wish-section h3{font-size:17px;letter-spacing:.4em;text-indent:.4em;color:var(--ivory);font-weight:600;margin-bottom:10px}
+.wish-sub{color:var(--mist);font-size:12.5px;letter-spacing:.2em;margin-bottom:30px}
+.press-ring{position:relative;width:150px;height:150px;margin:0 auto 6px;cursor:pointer;user-select:none;
+  -webkit-user-select:none;-webkit-tap-highlight-color:transparent;touch-action:none}
+.press-ring svg{position:absolute;inset:0;transform:rotate(-90deg)}
+.press-ring .pr-bg{fill:none;stroke:rgba(214,188,128,.25);stroke-width:2}
+.press-ring .pr-fill{fill:none;stroke:var(--gold-strong);stroke-width:2.5;stroke-linecap:round;
+  stroke-dasharray:440;stroke-dashoffset:440}
+.press-core{position:absolute;inset:14px;border-radius:50%;display:grid;place-items:center;
+  background:radial-gradient(circle at 36% 32%, rgba(242,234,214,.16), rgba(214,188,128,.05));
+  border:1px solid var(--gold-dim);transition:box-shadow .4s, transform .3s}
+.press-ring.holding .press-core{transform:scale(.94);
+  box-shadow:0 0 34px rgba(232,214,166,.45), inset 0 0 22px rgba(232,214,166,.18)}
+.press-ring.holding .pr-fill{stroke-dashoffset:0;transition:stroke-dashoffset 3s linear}
+.press-core b{font-size:30px;color:var(--gold-strong);font-weight:600;letter-spacing:.1em}
+.press-label{margin-top:16px;color:var(--mist);font-size:12px;letter-spacing:.4em;text-indent:.4em;
+  transition:opacity .5s;min-height:1.8em}
+.press-ring.holding~.press-label{opacity:.4}
+.press-msg{position:absolute;left:0;right:0;top:calc(50% - 46px);text-align:center;z-index:4;pointer-events:none;
+  color:var(--ivory);font-size:clamp(20px,4vw,30px);letter-spacing:.42em;text-indent:.42em;
+  opacity:0;transform:scale(.9);transition:opacity 1s ease, transform 1s ease;
+  text-shadow:0 0 26px rgba(232,214,166,.55)}
+.press-msg.show{opacity:1;transform:scale(1)}
+
 /* ── 响应式 ── */
 @media (max-width:900px){
   nav{left:10px;right:10px;transform:none;overflow-x:auto;justify-content:flex-start;scrollbar-width:none}
@@ -389,6 +417,7 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
   <a class="tab" href="#journal">手账</a>
   <a class="tab" href="#moon">月记</a>
   <a class="tab" href="#wishes">愿望</a>
+  <a class="tab" href="#press">专属</a>
   <a class="tab" href="#mail">信箱</a>
 </nav>
 
@@ -634,10 +663,30 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
   </div>
 </section>
 
-<!-- ════════════════ 柒 · 月亮信箱 ════════════════ -->
+<!-- ════════════════ 柒 · 给姚悦的专属按钮 ════════════════ -->
+<section class="page" id="page-press">
+  <div class="sec-head">
+    <span class="sec-num">柒</span><h2>专属按钮</h2><span class="sec-en">ONLY FOR YAOYUE</span>
+  </div>
+  <div class="wish-section">
+    <h3>给 姚 悦 的 专 属 按 钮</h3>
+    <div class="wish-sub">按住不放 · 三秒 · 惊喜自来</div>
+    <div class="press-ring" id="pressRing">
+      <svg viewBox="0 0 150 150">
+        <circle class="pr-bg" cx="75" cy="75" r="70"/>
+        <circle class="pr-fill" id="prFill" cx="75" cy="75" r="70"/>
+      </svg>
+      <div class="press-core"><b>悦</b></div>
+    </div>
+    <div class="press-label" id="pressLabel">按住下面的月亮 · 撑满三秒</div>
+    <div class="press-msg" id="pressMsg">晚安，姚悦。</div>
+  </div>
+</section>
+
+<!-- ════════════════ 捌 · 月亮信箱 ════════════════ -->
 <section class="page" id="page-mail">
   <div class="sec-head">
-    <span class="sec-num">柒</span><h2>月亮信箱</h2><span class="sec-en">MAILBOX · WRITE TO THE MOON</span>
+    <span class="sec-num">捌</span><h2>月亮信箱</h2><span class="sec-en">MAILBOX · WRITE TO THE MOON</span>
   </div>
   <div class="mail-box">
     <div class="sticker mail-sticker"><img src="assets/sticker-girl.jpg" alt="蓝头巾哭泣小妹"></div>
@@ -918,7 +967,7 @@ function spawnMeteor(){
 })();
 
 /* ───────── 页签路由 ───────── */
-var PAGE_IDS=["letter","memories","timeline","journal","moon","wishes","mail"];
+var PAGE_IDS=["letter","memories","timeline","journal","moon","wishes","press","mail"];
 function showPage(id){
   if(PAGE_IDS.indexOf(id)<0) id="letter";
   var pages=document.querySelectorAll(".page");
@@ -1825,7 +1874,62 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
   pullCloud();
 })();
 
-/* ───────── 彩蛋：点月亮→流星雨；点小狗→它说话 ───────── */
+/* ───────── 给姚悦的专属按钮：按住 3 秒 → 满屏流星 + 一句话 ───────── */
+(function pressBtn(){
+  var ring=document.getElementById("pressRing");
+  var fill=document.getElementById("prFill");
+  var msg=document.getElementById("pressMsg");
+  var label=document.getElementById("pressLabel");
+  if(!ring||!fill) return;
+
+  var HOLD=3000, t0=0, rafId=0, holding=false, fired=false;
+  var WORDS=[
+    "晚安，姚悦。",
+    "今天也要开心呀。",
+    "月亮很亮，亮也没用，没用也亮。我喜欢你，喜欢也没用，没用也喜欢。",
+    "你要一直一直一直开心下去。",
+    "努力的人运气不会差，比如你。",
+    "有事随时找我，我一直在。",
+    "往后的日子，都是好日子。"
+  ];
+
+  function ring(t){
+    rafId=requestAnimationFrame(ring);
+    var k=clamp01((performance.now()-t0)/HOLD);
+    fill.style.strokeDashoffset=440*(1-k);
+    if(performance.now()-t0>=HOLD){
+      holding=false; ring.classList.remove("holding");
+      fire(); stop();
+    }
+  }
+  function stop(){ cancelAnimationFrame(rafId); rafId=0;
+    fill.style.strokeDashoffset=440; }
+
+  function fire(){
+    if(fired) { fired=false; }
+    // 满屏流星爆发：8 秒内持续刷出
+    var n=0, iv=setInterval(function(){
+      spawnMeteor(); n++;
+      if(Math.random()<0.55) spawnMeteor();
+      if(n>=22){ clearInterval(iv); }
+    },180);
+    // 一句话
+    msg.textContent=WORDS[(Math.random()*WORDS.length)|0];
+    msg.classList.add("show");
+    setTimeout(function(){ msg.classList.remove("show"); },5200);
+    label.textContent="想按几次都可以 · 这里的流星为你下";
+  }
+  function startHold(){ if(holding) return;
+    holding=true; ring.classList.add("holding");
+    t0=performance.now(); rafId=requestAnimationFrame(ring);
+  }
+  function endHold(){ if(!holding) return; holding=false; ring.classList.remove("holding"); stop(); }
+
+  ring.addEventListener("pointerdown",function(e){ e.preventDefault(); startHold(); });
+  window.addEventListener("pointerup",endHold);
+  ring.addEventListener("pointerleave",endHold);
+  ring.addEventListener("contextmenu",function(e){ e.preventDefault(); });
+})();
 (function eggs(){
   document.getElementById("moonStage").addEventListener("click",function(){
     var n=0;
