@@ -351,11 +351,11 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
 .press-ring .pr-fill{fill:none;stroke:var(--gold-strong);stroke-width:2.5;stroke-linecap:round;
   stroke-dasharray:440;stroke-dashoffset:440}
 .press-core{position:absolute;inset:14px;border-radius:50%;display:grid;place-items:center;
-  background:radial-gradient(circle at 36% 32%, rgba(242,234,214,.16), rgba(214,188,128,.05));
-  border:1px solid var(--gold-dim);transition:box-shadow .4s, transform .3s}
+  background:radial-gradient(circle at 36% 32%, rgba(242,234,214,.14), rgba(214,188,128,.04));
+  transition:box-shadow .4s, transform .3s}
 .press-ring.holding .press-core{transform:scale(.94);
   box-shadow:0 0 34px rgba(232,214,166,.45), inset 0 0 22px rgba(232,214,166,.18)}
-.press-ring.holding .pr-fill{stroke-dashoffset:0;transition:stroke-dashoffset 3s linear}
+.press-core svg{filter:drop-shadow(0 0 10px rgba(240,230,200,.35))}
 .press-core b{font-size:30px;color:var(--gold-strong);font-weight:600;letter-spacing:.1em}
 .press-label{margin-top:16px;color:var(--mist);font-size:12px;letter-spacing:.4em;text-indent:.4em;
   transition:opacity .5s;min-height:1.8em}
@@ -676,7 +676,20 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
         <circle class="pr-bg" cx="75" cy="75" r="70"/>
         <circle class="pr-fill" id="prFill" cx="75" cy="75" r="70"/>
       </svg>
-      <div class="press-core"><b>悦</b></div>
+      <div class="press-core">
+        <svg viewBox="0 0 100 100" width="54" height="54" aria-hidden="true">
+          <defs>
+            <mask id="pressCresMask">
+              <rect width="100" height="100" fill="#fff"/>
+              <circle cx="34" cy="40" r="30" fill="#000"/>
+            </mask>
+          </defs>
+          <circle cx="54" cy="52" r="30" fill="#f2ead6" mask="url(#pressCresMask)"/>
+          <circle cx="24" cy="18" r="2.2" fill="#e8d6a6" opacity=".85"/>
+          <circle cx="40" cy="12" r="1.4" fill="#e8d6a6" opacity=".6"/>
+          <circle cx="70" cy="24" r="1.6" fill="#a9c1ff" opacity=".7"/>
+        </svg>
+      </div>
     </div>
     <div class="press-label" id="pressLabel">按住下面的月亮 · 撑满三秒</div>
     <div class="press-msg" id="pressMsg">晚安，姚悦。</div>
@@ -1876,7 +1889,7 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
 
 /* ───────── 给姚悦的专属按钮：按住 3 秒 → 满屏流星 + 一句话 ───────── */
 (function pressBtn(){
-  var ring=document.getElementById("pressRing");
+  var ringEl=document.getElementById("pressRing");
   var fill=document.getElementById("prFill");
   var msg=document.getElementById("pressMsg");
   var label=document.getElementById("pressLabel");
@@ -1893,12 +1906,12 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
     "往后的日子，都是好日子。"
   ];
 
-  function ring(t){
-    rafId=requestAnimationFrame(ring);
+  function progressTick(){
+    rafId=requestAnimationFrame(progressTick);
     var k=clamp01((performance.now()-t0)/HOLD);
     fill.style.strokeDashoffset=440*(1-k);
     if(performance.now()-t0>=HOLD){
-      holding=false; ring.classList.remove("holding");
+      holding=false; ringEl.classList.remove("holding");
       fire(); stop();
     }
   }
@@ -1920,15 +1933,15 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
     label.textContent="想按几次都可以 · 这里的流星为你下";
   }
   function startHold(){ if(holding) return;
-    holding=true; ring.classList.add("holding");
-    t0=performance.now(); rafId=requestAnimationFrame(ring);
+    holding=true; ringEl.classList.add("holding");
+    t0=performance.now(); rafId=requestAnimationFrame(progressTick);
   }
-  function endHold(){ if(!holding) return; holding=false; ring.classList.remove("holding"); stop(); }
+  function endHold(){ if(!holding) return; holding=false; ringEl.classList.remove("holding"); stop(); }
 
-  ring.addEventListener("pointerdown",function(e){ e.preventDefault(); startHold(); });
+  ringEl.addEventListener("pointerdown",function(e){ e.preventDefault(); startHold(); });
   window.addEventListener("pointerup",endHold);
-  ring.addEventListener("pointerleave",endHold);
-  ring.addEventListener("contextmenu",function(e){ e.preventDefault(); });
+  ringEl.addEventListener("pointerleave",endHold);
+  ringEl.addEventListener("contextmenu",function(e){ e.preventDefault(); });
 })();
 (function eggs(){
   document.getElementById("moonStage").addEventListener("click",function(){
