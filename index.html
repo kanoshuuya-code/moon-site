@@ -197,6 +197,12 @@ main{position:relative;z-index:2;max-width:1080px;margin:0 auto;padding:104px 22
 .tl-t{font-size:18px;color:var(--ivory);letter-spacing:.14em;margin:8px 0 8px;font-weight:600}
 .tl-s{font-size:14px;color:var(--body);line-height:2;opacity:.88}
 .tl-end{text-align:center;color:var(--mist);font-size:13px;letter-spacing:.5em;text-indent:.5em;margin-top:6px}
+.tl-note{text-align:center;color:var(--mist);font-size:11.5px;letter-spacing:.16em;margin-top:14px;opacity:.7}
+.tl-auto{cursor:pointer;border-left:3px solid var(--gold-dim)}
+.tl-auto:hover{border-color:rgba(214,188,128,.6)}
+.tl-src{display:inline-block;font-size:10.5px;letter-spacing:.14em;color:var(--gold);
+  border:1px solid rgba(214,188,128,.35);border-radius:999px;padding:1px 9px;margin-left:6px;
+  vertical-align:middle;font-weight:400}
 
 /* ═══════════════ 肆 · 手账（stories/*.txt） ═══════════════ */
 .journal-intro{max-width:780px;margin:0 auto 26px;background:var(--card);border:1px solid var(--card-line);
@@ -565,6 +571,7 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
     </div>
   </div>
   <div class="tl-end">· 时序未完 ·</div>
+  <div class="tl-note">✎ 手账里以日期开头的文章（如「2026-10-26 一起出去玩的那天.txt」）会自动出现在这里</div>
 </section>
 
 <!-- ════════════════ 肆 · 手账（往 stories 文件夹丢 .txt 就行） ════════════════ -->
@@ -788,6 +795,103 @@ function daysBetween(a,b){
       '</div>';
   });
   if(html) tl.innerHTML=html;
+})();
+
+/* ───────── 手账 → 时序：以日期开头的手账自动上时间线 ─────────
+   文件名如「2026-10-26 一起出去玩的那天.txt」：
+   标题取日期后的文字，摘要取正文第一行，自动算「第 N 天」，点一下跳去手账 */
+(function journalToTimeline(){
+  var tl=document.querySelector("#page-timeline .tl");
+  if(!tl) return;
+  var DATE_RE=/(\d{4})[.\-/年](\d{1,2})[.\-/月](\d{1,2})/;
+  function parseDate(txt){
+    var m=String(txt||"").match(DATE_RE);
+    if(!m) return null;
+    var d=new Date(+m[1],+m[2]-1,+m[3]);
+    if(isNaN(d.getTime())) return null;
+    return {date:d,label:m[1]+"."+m[2]+"."+m[3]};
+  }
+  async function firstLine(name){
+    try{
+      var r=await fetch("stories/"+encodeURIComponent(name),{cache:"no-store"});
+      if(!r.ok) return "";
+      var buf=await r.arrayBuffer();
+      var text;
+      try{ text=new TextDecoder("utf-8",{fatal:true}).decode(buf); }
+      catch(e){ text=new TextDecoder("gbk").decode(buf); }
+      var line=String(text).replace(/\s+/g," ").trim();
+      return line.length>76? line.slice(0,76)+"…" : line;
+    }catch(e){ return ""; }
+  }
+  function insertItem(node,date){
+    var items=Array.prototype.slice.call(tl.querySelectorAll(".tl-item"));
+    var target=null,future=null;
+    for(var i=0;i<items.length;i++){
+      var it=items[i];
+      if(it.classList&&it.classList.contains("tl-auto")) continue;
+      var span=it.querySelector(".tl-date span");
+      var txt=span?span.textContent:"";
+      if(/未来|待续/.test(txt)){ future=it; continue; }
+      var pd=parseDate(txt);
+      if(pd&&!target&&pd.date.getTime()>date.getTime()) target=it;
+    }
+    if(target) tl.insertBefore(node,target);
+    else if(future) tl.insertBefore(node,future);
+    else tl.appendChild(node);
+  }
+  async function run(){
+    try{
+      var names=[];
+      try{
+        var r=await fetch("stories/",{cache:"no-store"});
+        if(r.ok){
+          var html=await r.text(), m, re=/href="([^"']+\.txt)"/gi;
+          while((m=re.exec(html))!==null){
+            var n=decodeURIComponent(m[1].replace(/^\.\//,""));
+            if(n.toLowerCase()==="list.txt") continue;
+            if(names.indexOf(n)<0) names.push(n);
+          }
+        }
+      }catch(e){}
+      if(!names.length){
+        try{
+          var lr=await fetch("stories/list.txt",{cache:"no-store"});
+          if(lr.ok){
+            (await lr.text()).split(/\r?\n/).forEach(function(line){
+              var nm=line.trim();
+              if(nm&&/\.txt$/i.test(nm)&&names.indexOf(nm)<0) names.push(nm);
+            });
+          }
+        }catch(e2){}
+      }
+      var an=anchorInfo();
+      var dated=[];
+      for(var i=0;i<names.length;i++){
+        var pd=parseDate(names[i]);
+        if(pd) dated.push({name:names[i],pd:pd});
+      }
+      dated.sort(function(a,b){ return a.pd.date-b.pd.date; });
+      if(dated.length>16) dated=dated.slice(dated.length-16);
+      for(var j=0;j<dated.length;j++){
+        var d=dated[j];
+        var titleRaw=d.name.replace(/\.txt$/i,"").replace(DATE_RE,"").trim();
+        titleRaw=titleRaw.replace(/^[\s_\-·.、，]+/,"").trim()||"手账";
+        var summ=await firstLine(d.name);
+        var n=daysBetween(an.date,d.pd.date)+1;
+        var el=document.createElement("div");
+        el.className="tl-item tl-auto";
+        el.title="点一下，去看这篇手账";
+        el.innerHTML=
+          '<div class="tl-date"><span>'+esc(d.pd.label)+'</span>'+
+          (isFinite(n)&&n>=1?'<span class="tl-day">第 '+n+' 天</span>':'')+'</div>'+
+          '<div class="tl-t">'+esc(titleRaw)+' <span class="tl-src">✎ 手账</span></div>'+
+          '<div class="tl-s">'+esc(summ||"点开手账，看看这一天写了什么。")+'</div>';
+        el.addEventListener("click",function(){ location.hash="journal"; });
+        insertItem(el,d.pd.date);
+      }
+    }catch(e){}
+  }
+  run();
 })();
 
 /* ───────── 星空 ───────── */
