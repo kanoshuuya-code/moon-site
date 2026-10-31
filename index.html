@@ -1893,7 +1893,7 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
   var fill=document.getElementById("prFill");
   var msg=document.getElementById("pressMsg");
   var label=document.getElementById("pressLabel");
-  if(!ring||!fill) return;
+  if(!ringEl||!fill) return;
 
   var HOLD=3000, t0=0, rafId=0, holding=false, fired=false;
   var WORDS=[
