@@ -381,6 +381,13 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
   65%{opacity:.95}
   100%{transform:translate(var(--dx),var(--dy)) scale(.25);opacity:0}
 }
+.fwr{position:fixed;width:3px;height:8px;border-radius:2px;pointer-events:none;z-index:120;
+  background:linear-gradient(180deg,rgba(244,236,214,.95),rgba(214,188,128,0));
+  animation:fwrain var(--dur,2.2s) linear both}
+@keyframes fwrain{
+  from{transform:translate(0,-8vh);opacity:.9}
+  to{transform:translate(var(--dx,0px),74vh);opacity:0}
+}
 
 /* ── 响应式 ── */
 @media (max-width:900px){
@@ -988,14 +995,14 @@ function daysBetween(a,b){
 function spawnMeteor(opt){
   opt=opt||{};
   var sky=document.getElementById("sky");
-  if(!sky||sky.children.length>60) return;
+  if(!sky) return;
+  if(sky.querySelectorAll(".meteor").length>=70) return;
   var m=document.createElement("i"); m.className="meteor";
   if(opt.big){ m.style.height="190px"; m.style.width="3.5px"; }
   m.style.left=(2+Math.random()*82)+"%";
   m.style.top=(2+Math.random()*40)+"%";
-  if(opt.fast) m.style.animationDuration="0.9s";
   sky.appendChild(m);
-  setTimeout(function(){ m.remove(); },2100);
+  setTimeout(function(){ m.remove(); },1800);
 }
 (function meteorLoop(){
   setTimeout(function(){ spawnMeteor(); meteorLoop(); }, 6000+Math.random()*8000);
@@ -1950,11 +1957,14 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
     var rect=ringEl.getBoundingClientRect();
     shockwave(rect.left+rect.width/2, rect.top+rect.height/2);
     setTimeout(function(){ shockwave(rect.left+rect.width/2, rect.top+rect.height/2); },260);
-    // 四波流星雨：78 颗，一波比一波盛大
-    spawnBurst(16,{big:true});
-    setTimeout(function(){ spawnBurst(20); },450);
-    setTimeout(function(){ spawnBurst(24,{big:true,fast:true}); },950);
-    setTimeout(function(){ spawnBurst(18,{fast:true}); },1450);
+    // 四波流星雨：共 86 颗，一波比一波盛大
+    spawnBurst(18,{big:true});
+    setTimeout(function(){ spawnBurst(22); },450);
+    setTimeout(function(){ spawnBurst(26,{big:true,fast:true}); },950);
+    setTimeout(function(){ spawnBurst(20,{fast:true}); },1450);
+    // 金色星雨：从天幕缓缓落下
+    setTimeout(function(){ goldenRain(36); },300);
+    setTimeout(function(){ goldenRain(28); },1300);
     // 天幕烟花：8 处依次绽放
     var fwT=[80,340,620,900,1180,1480,1800,2100];
     for(var wi=0;wi<fwT.length;wi++){
@@ -1974,6 +1984,19 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
   function spawnBurst(n,opt){
     for(var i=0;i<n;i++){
       setTimeout(function(){ spawnMeteor(opt); },Math.random()*650);
+    }
+  }
+  function goldenRain(n){
+    for(var i=0;i<n;i++){
+      (function(idx){
+        var p=document.createElement("i"); p.className="fwr";
+        p.style.left=(Math.random()*100)+"vw";
+        p.style.setProperty("--dur",(1.8+Math.random()*1.2).toFixed(2)+"s");
+        p.style.setProperty("--dx",((Math.random()-0.5)*60).toFixed(0)+"px");
+        p.style.animationDelay=(Math.random()*0.7).toFixed(2)+"s";
+        document.body.appendChild(p);
+        setTimeout(function(){ p.remove(); },4200);
+      })(i);
     }
   }
   function flashScreen(){
