@@ -337,6 +337,11 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
   background:rgba(0,0,0,.55);color:#fff;font-size:12px;display:grid;place-items:center;
   cursor:pointer;opacity:0;transition:.2s}
 .pa-cell:hover .pa-reset{opacity:1}
+.pa-addform{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.pa-addform input{flex:1 1 150px;background:rgba(240,233,216,.05);border:1px solid var(--card-line);
+  border-radius:8px;color:var(--ivory);padding:8px 10px;font:inherit;font-size:13px;letter-spacing:.05em;outline:none;min-width:0}
+.pa-addform input:focus{border-color:var(--gold-dim)}
+.pa-addform .btn{padding:8px 14px;letter-spacing:.08em;text-indent:0;white-space:nowrap}
 
 /* ── 给姚悦的专属按钮 ── */
 .wish-section{position:relative;max-width:720px;margin:0 auto;background:var(--card);
@@ -782,6 +787,14 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
     <div class="pa-grid" id="paGridPhotos"></div>
     <div class="pa-sec">页面贴纸</div>
     <div class="pa-grid" id="paGridStickers"></div>
+    <div class="pa-sec">＋ 添加新的回忆</div>
+    <div class="pa-addform">
+      <button class="btn" id="paNewImg">① 选图片</button>
+      <input id="paAddTitle" maxlength="24" placeholder="② 标题（如：第一次一起看电影）">
+      <input id="paAddSub" maxlength="40" placeholder="③ 一句话说明（可不填）">
+      <button class="btn" id="paAddSave">④ 添加到回忆</button>
+    </div>
+    <div class="pa-grid" id="paGridAdded" style="margin-top:12px"></div>
     <div class="pa-actions" style="margin-top:20px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
       <button class="btn" id="paSyncAll">把本机照片全部同步到云端</button>
       <span class="tiny-note" id="paSyncMsg"></span>
@@ -789,6 +802,7 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
   </div>
 </div>
 <input type="file" id="paFile" accept="image/*" style="display:none">
+<input type="file" id="paNewFile" accept="image/*" style="display:none">
 
 <!-- 灯箱 -->
 <div class="lb" id="lb">
@@ -1442,17 +1456,22 @@ window.addEventListener("hashchange",function(){ showPage(location.hash.replace(
 
 /* ───────── 灯箱 ───────── */
 (function lightbox(){
-  var polars=Array.prototype.slice.call(document.querySelectorAll(".polar"));
   var lb=document.getElementById("lb"), img=document.getElementById("lbImg"),
       cap=document.getElementById("lbCap"), idx=0;
+  function polars(){ return Array.prototype.slice.call(document.querySelectorAll(".polar")); }
   function show(i){
-    idx=(i+polars.length)%polars.length;
-    var p=polars[idx];
+    var ps=polars();
+    idx=(i+ps.length)%ps.length;
+    var p=ps[idx];
     img.src=p.getAttribute("data-src");
     cap.textContent=p.getAttribute("data-cap");
     lb.classList.add("open");
   }
-  polars.forEach(function(p,i){ p.addEventListener("click",function(){ show(i); }); });
+  document.getElementById("gallery").addEventListener("click",function(e){
+    var fig=e.target&&e.target.closest ? e.target.closest(".polar") : null;
+    if(!fig) return;
+    show(polars().indexOf(fig));
+  });
   document.getElementById("lbClose").addEventListener("click",function(){ lb.classList.remove("open"); });
   document.getElementById("lbPrev").addEventListener("click",function(e){ e.stopPropagation(); show(idx-1); });
   document.getElementById("lbNext").addEventListener("click",function(e){ e.stopPropagation(); show(idx+1); });
@@ -1841,6 +1860,40 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
       var m=(im.getAttribute("data-orig")||im.getAttribute("src")||"").match(/sticker-([a-z0-9]+)\.jpg/);
       if(m) applyImg(im,"sticker-"+m[1]);
     });
+    applyAdded();
+  }
+  function romanNum(n){
+    var map=[[1000,"M"],[900,"CM"],[500,"D"],[400,"CD"],[100,"C"],[90,"XC"],[50,"L"],[40,"XL"],[10,"X"],[9,"IX"],[5,"V"],[4,"IV"],[1,"I"]];
+    var s=""; for(var i=0;i<map.length;i++){ while(n>=map[i][0]){ s+=map[i][1]; n-=map[i][0]; } } return s||"I";
+  }
+  function applyAdded(){
+    var gal=document.getElementById("gallery"); if(!gal) return;
+    var metaAll=store.get("yy_photos_meta")||{};
+    Object.keys(overrides).forEach(function(key){
+      if(!/^photo-add-/.test(key)) return;
+      var d=overrides[key];
+      var info={img:"",t:"新的回忆",s:""};
+      if(d&&d.charAt(0)==="{"){ try{ var o=JSON.parse(d); info.img=o.img||""; info.t=o.t||info.t; info.s=o.s||""; }catch(e){ info.img=d; } }
+      else info.img=d||"";
+      var fig=gal.querySelector('[data-key="'+key+'"]');
+      if(!fig){
+        var count=gal.querySelectorAll(".polar").length;
+        fig=document.createElement("figure"); fig.className="polar"; fig.setAttribute("data-key",key);
+        var num=document.createElement("span"); num.className="num"; num.textContent=romanNum(count+1);
+        var img=document.createElement("img");
+        var fcap=document.createElement("figcaption");
+        fcap.innerHTML='<div class="cap-t"></div><div class="cap-s"></div>';
+        fig.appendChild(num); fig.appendChild(img); fig.appendChild(fcap);
+        gal.appendChild(fig);
+      }
+      var im2=fig.querySelector("img");
+      im2.src=info.img;
+      im2.setAttribute("data-orig",info.img);
+      fig.setAttribute("data-src",info.img);
+      var ct=fig.querySelector(".cap-t"), cs=fig.querySelector(".cap-s");
+      if(ct) ct.textContent=info.t;
+      if(cs) cs.textContent=info.s;
+    });
   }
   function saveOverrides(){ try{ store.set(KEY,overrides); }catch(e){} }
 
@@ -1975,8 +2028,63 @@ document.getElementById("journalReload").addEventListener("click",function(){ lo
     }
     paMsg(fail? "完成 "+ok+" 张，失败 "+fail+" 张："+lastErr : "已同步 "+ok+" 张到云端 ✅",!fail);
   });
+
+  /* ── 添加新的回忆 ── */
+  var newImgData="", newFileName="";
+  var newBtn=document.getElementById("paNewImg"), newFile=document.getElementById("paNewFile");
+  var titleIn=document.getElementById("paAddTitle"), subIn=document.getElementById("paAddSub");
+  var saveAddBtn=document.getElementById("paAddSave");
+  if(newBtn&&newFile){
+    newBtn.addEventListener("click",function(){ newFile.click(); });
+    newFile.addEventListener("change",function(){
+      var f=newFile.files&&newFile.files[0]; if(!f)return;
+      newBtn.textContent="图片已选 ✓";
+      downsample(f,function(dataUrl){ newImgData=dataUrl; });
+    });
+  }
+  if(saveAddBtn){
+    saveAddBtn.addEventListener("click",function(){
+      if(!newImgData){ paMsg("先点「① 选图片」选一张照片",false); return; }
+      var t=(titleIn&&titleIn.value?titleIn.value:"").trim()||"新的回忆";
+      var s=(subIn&&subIn.value?subIn.value:"").trim();
+      var key="photo-add-"+Date.now();
+      overrides[key]=JSON.stringify({img:newImgData,t:t,s:s});
+      var meta2=store.get("yy_photos_meta")||{}; meta2[key]={t:t,s:s}; store.set("yy_photos_meta",meta2);
+      saveOverrides(); applyAll(); buildPanel();
+      newImgData=""; newFileName=""; if(newFile) newFile.value="";
+      if(titleIn) titleIn.value=""; if(subIn) subIn.value="";
+      pushCloud(key,overrides[key]);
+      paMsg("已添加 ✅"+(CLOUD?"（已同步云端）":"（当前仅本机可见）"),true);
+    });
+  }
+  function buildAddedPanel(){
+    var ga=document.getElementById("paGridAdded"); if(!ga) return;
+    ga.innerHTML="";
+    var keys=Object.keys(overrides).filter(function(k){ return /^photo-add-/.test(k); });
+    var metaAll=store.get("yy_photos_meta")||{};
+    if(!keys.length){
+      var em=document.createElement("div"); em.className="journal-empty"; em.textContent="· 还没有新增的回忆 ·";
+      ga.appendChild(em); return;
+    }
+    keys.forEach(function(key){
+      var info={img:"",t:"新回忆",s:""};
+      try{ var o=JSON.parse(overrides[key]); info.img=o.img||""; info.t=o.t||"新回忆"; info.s=o.s||""; }catch(e){ info.img=overrides[key]; }
+      var cellEl=document.createElement("div"); cellEl.className="pa-cell";
+      var im=document.createElement("img"); im.src=info.img; im.alt=info.t; cellEl.appendChild(im);
+      var lb=document.createElement("span"); lb.className="pa-lab"; lb.textContent=info.t; cellEl.appendChild(lb);
+      var dl=document.createElement("span"); dl.className="del"; dl.textContent="✕"; dl.title="删除这条回忆";
+      dl.style.cssText="position:absolute;right:8px;top:8px;color:#ffb3a6;font-size:14px;cursor:pointer";
+      dl.addEventListener("click",function(){
+        delete overrides[key];
+        var meta2=store.get("yy_photos_meta")||{}; delete meta2[key]; store.set("yy_photos_meta",meta2);
+        saveOverrides(); applyAll(); buildAddedPanel(); delCloud(key);
+      });
+      cellEl.appendChild(dl);
+      ga.appendChild(cellEl);
+    });
+  }
   document.getElementById("photoAdminBtn").addEventListener("click",function(){
-    buildPanel(); document.getElementById("photoAdmin").hidden=false;
+    buildPanel(); buildAddedPanel(); document.getElementById("photoAdmin").hidden=false;
   });
   document.getElementById("paClose").addEventListener("click",function(){ document.getElementById("photoAdmin").hidden=true; });
   document.getElementById("photoAdmin").addEventListener("click",function(e){ if(e.target===this) this.hidden=true; });
