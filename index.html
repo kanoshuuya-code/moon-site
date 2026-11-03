@@ -343,6 +343,14 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
 .pa-addform input:focus{border-color:var(--gold-dim)}
 .pa-addform .btn{padding:8px 14px;letter-spacing:.08em;text-indent:0;white-space:nowrap}
 
+/* ── 视频回忆 ── */
+.video-sec{max-width:780px;margin:0 auto;padding-top:56px}
+.video-sec h3{text-align:center}
+.video-list-card{max-width:640px;margin:0 auto;background:var(--card);border:1px solid var(--card-line);
+  border-radius:14px;padding:16px;backdrop-filter:blur(4px)}
+.video-list-card video{width:100%;border-radius:10px;display:block;background:#000}
+.video-list-card figcaption{text-align:center;color:var(--ivory);font-size:13.5px;letter-spacing:.14em;margin-top:10px}
+
 /* ── 给姚悦的专属按钮 ── */
 .wish-section{position:relative;max-width:720px;margin:0 auto;background:var(--card);
   border:1px solid var(--card-line);border-radius:16px;padding:38px clamp(22px,5vw,46px) 34px;
@@ -587,6 +595,17 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
   <div class="gal-note">点开一张照片 · 就回到那天</div>
   <div style="text-align:center;margin-top:24px">
     <button class="btn" id="photoAdminBtn">自定义照片</button>
+  </div>
+  <!-- 视频回忆：videos 文件夹里的 .mp4 自动出现在这里 -->
+  <div class="video-sec">
+    <div class="sec-head" style="margin:70px auto 40px">
+      <span class="sec-num">✦</span><h3 style="font-size:clamp(20px,3vw,26px);letter-spacing:.3em;font-weight:600;color:var(--ivory)">视频回忆</h3><span class="sec-en">VIDEO MEMORIES</span>
+    </div>
+    <div class="journal-intro">会动的那一瞬间，比照片更接近记忆本身。把 .mp4 放进 <b>videos</b> 文件夹，在这里就能播放。</div>
+    <div class="journal-actions">
+      <button class="btn" id="videoReload">重新读取</button>
+    </div>
+    <div id="videoList"><div class="journal-empty">· 正在寻找会动的回忆 ·</div></div>
   </div>
 </section>
 
@@ -1033,6 +1052,7 @@ function showPage(id){
   window.scrollTo(0,0);
   if(id==="journal") loadJournal();
   if(id==="wishes"&&window.__syncWishes) window.__syncWishes();
+  if(id==="memories") loadVideos();
   if(id==="mail"&&window.__loadLetters) window.__loadLetters();
 }
 window.addEventListener("hashchange",function(){ showPage(location.hash.replace("#","")); });
@@ -1559,6 +1579,41 @@ async function loadJournal(force){
   }
 }
 document.getElementById("journalReload").addEventListener("click",function(){ loadJournal(true); });
+
+/* ───────── 视频回忆：读取 videos/list.txt（每行 "文件名 | 标题"） ───────── */
+var videosLoaded=false;
+async function loadVideos(force){
+  if(videosLoaded&&!force) return;
+  var box=document.getElementById("videoList");
+  if(!box) return;
+  try{
+    var r=await fetch("videos/list.txt",{cache:"no-store"});
+    if(!r.ok) throw new Error("list");
+    var lines=(await r.text()).split(/\r?\n/).map(function(s){return s.trim();})
+      .filter(function(s){ return s&&s.charAt(0)!=="#"; });
+    if(!lines.length){
+      box.innerHTML='<div class="journal-empty">· 还没有视频回忆 ·</div>'+
+        '<div class="journal-warn">把 .mp4 文件放进 <code>videos</code> 文件夹，再在 <code>videos/list.txt</code> 里加一行：<code>文件名.mp4 | 标题</code></div>';
+      videosLoaded=true; return;
+    }
+    var cards=[];
+    lines.forEach(function(line){
+      var parts=line.split("|");
+      var file=(parts[0]||"").trim(), title=(parts[1]||"").trim()||file;
+      cards.push(
+        '<figure class="video-list-card">'+
+        '<video controls preload="metadata" src="videos/'+encodeURIComponent(file)+'"></video>'+
+        '<figcaption>▶ '+esc(title)+'</figcaption></figure>'
+      );
+    });
+    box.innerHTML=cards.join("");
+    videosLoaded=true;
+  }catch(e){
+    box.innerHTML='<div class="journal-warn">读不到视频文件夹（本地双击打开时读取不了目录，属正常）。<br>'+
+      '用 <code>启动小站.bat</code> 或部署上线后即可播放；视频文件都安全地在 videos 文件夹里。</div>';
+  }
+}
+document.getElementById("videoReload").addEventListener("click",function(){ loadVideos(true); });
 
 /* ───────── 愿望清单（云端同步：配好 Supabase 后双方共享） ───────── */
 (function wishes(){
