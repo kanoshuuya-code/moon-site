@@ -74,6 +74,24 @@ body.lock{overflow:hidden}
   border-left:1px solid rgba(214,188,128,.5);border-bottom:1px solid rgba(214,188,128,.5)}
 .intro-skip:hover{color:var(--gold);opacity:1}
 
+/* ── 进站口令 ── */
+.gate{position:fixed;inset:0;z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#030510,#090e1f 55%,#04060f);transition:opacity .8s ease}
+.gate.gone{opacity:0;pointer-events:none}
+.g-mark{color:var(--gold);font-size:15px;letter-spacing:.5em;text-indent:.5em;margin-bottom:10px}
+.g-sub{color:rgba(143,154,189,.6);font-size:11px;letter-spacing:.4em;text-indent:.4em;margin-bottom:38px}
+#gateInput{background:rgba(240,233,216,.06);border:1px solid var(--gold-dim);border-radius:999px;
+  color:var(--ivory);padding:12px 24px;font:inherit;font-size:14px;letter-spacing:.2em;text-align:center;
+  outline:none;width:min(300px,78vw);transition:border-color .3s}
+#gateInput:focus{border-color:var(--gold)}
+.g-err{color:#d98a7e;font-size:12px;letter-spacing:.12em;height:1.6em;margin-top:12px}
+.g-btn{margin-top:14px;background:linear-gradient(180deg,rgba(214,188,128,.24),rgba(214,188,128,.12));
+  border:1px solid var(--gold-dim);color:var(--gold-strong);border-radius:999px;padding:11px 44px;
+  font:inherit;font-size:14px;letter-spacing:.5em;text-indent:.5em;cursor:pointer;transition:.3s}
+.g-btn:hover{background:rgba(214,188,128,.3)}
+.gate.shake #gateInput{animation:shake .45s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
 /* ── 胶囊导航（多页签） ── */
 nav{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:60;
   display:flex;align-items:center;gap:2px;padding:7px 10px;
@@ -433,6 +451,41 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
 </style>
 </head>
 <body>
+
+<!-- 进站口令（口令在 moon-config.js 的 SITE_PASSWORD 里设置/修改） -->
+<div class="gate" id="gate">
+  <div class="g-mark">TO YY · 月亮小站</div>
+  <div class="g-sub">这 里 只 属 于 两 个 人</div>
+  <input id="gateInput" type="password" placeholder="进站口令" autocomplete="off">
+  <div class="g-err" id="gateErr"></div>
+  <button class="g-btn" id="gateBtn">进　入</button>
+</div>
+<script>
+(function(){
+  var gate=document.getElementById("gate");
+  if(!gate) return;
+  var P=null;
+  try{ P=window.SITE_PASSWORD; }catch(e){}
+  if(P==null||P===""){ gate.style.display="none"; return; }
+  var ok=false;
+  try{ ok=localStorage.getItem("yy_gate")==="1"; }catch(e){}
+  if(ok){ gate.style.display="none"; return; }
+  function unlock(){
+    var v=document.getElementById("gateInput").value;
+    if(v===P){
+      try{ localStorage.setItem("yy_gate","1"); }catch(e){}
+      gate.classList.add("gone");
+      setTimeout(function(){ gate.style.display="none"; },860);
+    }else{
+      document.getElementById("gateErr").textContent="口令不对，再想想～";
+      gate.classList.add("shake");
+      setTimeout(function(){ gate.classList.remove("shake"); },480);
+    }
+  }
+  document.getElementById("gateBtn").addEventListener("click",unlock);
+  document.getElementById("gateInput").addEventListener("keydown",function(e){ if(e.key==="Enter") unlock(); });
+})();
+</script>
 
 <div class="sky" id="sky"></div>
 

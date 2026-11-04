@@ -16,3 +16,9 @@ window.MAILBOX_CLOUD = {
   key: "sb_publishable_hYP-ZfCLQpQt6iaD_BJEKg_l7Jsee4H",
   table: "moon_letters"
 };
+
+/* ═══ 进站口令（可选） ═══
+   填上后：打开网站需要先输入口令才能看到内容（只有你和她知道就行）
+   留空 "" = 不启用口令，打开直接看
+   想改口令：改引号里的字，保存并重新上传 index.html */
+window.SITE_PASSWORD = "1026";
