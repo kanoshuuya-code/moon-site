@@ -59,14 +59,15 @@ body.lock{overflow:hidden}
   animation:bob 3.2s ease-in-out infinite;transition:opacity .8s;pointer-events:none}
 .intro.playing .intro-cap{opacity:0}
 .intro.pass .intro-cap{opacity:0}
-.intro-pass{position:absolute;left:0;right:0;top:calc(42% + min(18vh,165px));display:flex;gap:10px;justify-content:center;
+.intro-pass{position:absolute;left:0;right:0;top:calc(42% + min(18vh,165px));display:flex;flex-direction:column;align-items:center;gap:10px;justify-content:center;
   opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity .6s,transform .6s}
 .intro.pass .intro-pass{opacity:1;pointer-events:auto;transform:none}
 .intro-pass input{background:rgba(240,233,216,.06);border:1px solid var(--gold-dim);border-radius:999px;
   color:var(--ivory);padding:10px 20px;font:inherit;font-size:14px;letter-spacing:.2em;text-align:center;
   outline:none;width:min(240px,70vw);transition:border-color .3s}
 .intro-pass input:focus{border-color:var(--gold)}
-.intro-pass-hint{color:rgba(214,188,128,.55);font-size:12px;letter-spacing:.35em;text-align:center;margin-bottom:12px}
+.intro-pass-hint{color:var(--gold-strong);font-size:15px;letter-spacing:.32em;text-indent:.32em;text-align:center;margin-top:2px;
+  text-shadow:0 0 14px rgba(232,214,166,.45)}
 .intro.pass-err .intro-pass input{border-color:#d98a7e;animation:shake .45s}
 .intro-pass-err{color:#d98a7e;font-size:12px;letter-spacing:.12em;height:1.6em;margin-top:10px;text-align:center;opacity:0;transition:opacity .3s}
 .intro.pass-err .intro-pass-err{opacity:1}
@@ -472,8 +473,8 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
   <div class="intro-mark">TO YY<span> · 月亮小站</span></div>
   <div class="intro-cap" id="introCap">点一下月亮</div>
   <div class="intro-pass" id="introPass">
-    <div class="intro-pass-hint">提示 · 她的生日</div>
     <input id="introPassInput" type="password" placeholder="输入口令" autocomplete="off">
+    <div class="intro-pass-hint">提示 · 她的生日</div>
     <div class="intro-pass-err" id="introPassErr"></div>
   </div>
 </div>
