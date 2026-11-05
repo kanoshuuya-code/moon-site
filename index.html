@@ -58,6 +58,18 @@ body.lock{overflow:hidden}
   color:rgba(239,233,216,.62);font-size:12.5px;letter-spacing:.62em;text-indent:.62em;
   animation:bob 3.2s ease-in-out infinite;transition:opacity .8s;pointer-events:none}
 .intro.playing .intro-cap{opacity:0}
+.intro.pass .intro-cap{opacity:0}
+.intro-pass{position:absolute;left:0;right:0;top:calc(42% + min(18vh,165px));display:flex;gap:10px;justify-content:center;
+  opacity:0;pointer-events:none;transform:translateY(10px);transition:opacity .6s,transform .6s}
+.intro.pass .intro-pass{opacity:1;pointer-events:auto;transform:none}
+.intro-pass input{background:rgba(240,233,216,.06);border:1px solid var(--gold-dim);border-radius:999px;
+  color:var(--ivory);padding:10px 20px;font:inherit;font-size:14px;letter-spacing:.2em;text-align:center;
+  outline:none;width:min(240px,70vw);transition:border-color .3s}
+.intro-pass input:focus{border-color:var(--gold)}
+.intro-pass-hint{color:rgba(214,188,128,.55);font-size:12px;letter-spacing:.35em;text-align:center;margin-bottom:12px}
+.intro.pass-err .intro-pass input{border-color:#d98a7e;animation:shake .45s}
+.intro-pass-err{color:#d98a7e;font-size:12px;letter-spacing:.12em;height:1.6em;margin-top:10px;text-align:center;opacity:0;transition:opacity .3s}
+.intro.pass-err .intro-pass-err{opacity:1}
 .intro-mark{position:absolute;top:24px;left:28px;z-index:2;pointer-events:none;
   color:rgba(214,188,128,.82);font-size:13px;letter-spacing:.4em;padding:6px 20px}
 .intro-mark::before{content:"";position:absolute;left:0;top:0;width:12px;height:16px;
@@ -452,49 +464,18 @@ footer{position:relative;z-index:2;text-align:center;padding:40px 24px 60px}
 </head>
 <body>
 
-<!-- 进站口令（口令在 moon-config.js 的 SITE_PASSWORD 里设置/修改） -->
-<div class="gate" id="gate">
-  <div class="g-mark">TO YY · 月亮小站</div>
-  <div class="g-sub">这 里 只 属 于 两 个 人</div>
-  <input id="gateInput" type="password" placeholder="进站口令" autocomplete="off">
-  <div class="g-err" id="gateErr"></div>
-  <button class="g-btn" id="gateBtn">进　入</button>
-</div>
-<script>
-(function(){
-  var gate=document.getElementById("gate");
-  if(!gate) return;
-  var P=null;
-  try{ P=window.SITE_PASSWORD; }catch(e){}
-  if(P==null||P===""){ gate.style.display="none"; return; }
-  var ok=false;
-  try{ ok=localStorage.getItem("yy_gate")==="1"; }catch(e){}
-  if(ok){ gate.style.display="none"; return; }
-  function unlock(){
-    var v=document.getElementById("gateInput").value;
-    if(v===P){
-      try{ localStorage.setItem("yy_gate","1"); }catch(e){}
-      gate.classList.add("gone");
-      setTimeout(function(){ gate.style.display="none"; },860);
-    }else{
-      document.getElementById("gateErr").textContent="口令不对，再想想～";
-      gate.classList.add("shake");
-      setTimeout(function(){ gate.classList.remove("shake"); },480);
-    }
-  }
-  document.getElementById("gateBtn").addEventListener("click",unlock);
-  document.getElementById("gateInput").addEventListener("keydown",function(e){ if(e.key==="Enter") unlock(); });
-})();
-</script>
-
 <div class="sky" id="sky"></div>
 
 <!-- 开场 · 粒子之月：远处的粒子弯月 → 点击 → 由远及近点亮成满月 → 揭开结缘 -->
 <div class="intro" id="intro">
   <canvas id="introCanvas"></canvas>
   <div class="intro-mark">TO YY<span> · 月亮小站</span></div>
-  <div class="intro-cap">点一下月亮</div>
-  <button class="intro-skip" id="introSkip">先直接进入 →</button>
+  <div class="intro-cap" id="introCap">点一下月亮</div>
+  <div class="intro-pass" id="introPass">
+    <div class="intro-pass-hint">提示 · 她的生日</div>
+    <input id="introPassInput" type="password" placeholder="输入口令" autocomplete="off">
+    <div class="intro-pass-err" id="introPassErr"></div>
+  </div>
 </div>
 <div class="press-flash" id="pressFlash"></div>
 <script>try{var _f=(location.search+location.hash).indexOf("intro")>=0;if(!_f&&sessionStorage.getItem("yy_intro")==="1"){var _it=document.getElementById("intro");_it.style.display="none";}}catch(e){}</script>
@@ -1290,14 +1271,12 @@ window.addEventListener("hashchange",function(){ showPage(location.hash.replace(
       big:big});
   }
 
-  var AUTO_MS=4500;
   function draw(now){
     raf=requestAnimationFrame(draw);
     // 自适应降载：帧耗时偏高时自动降低月亮粒子密度，保证不卡
     var dt=now-(draw.last||now);draw.last=now;
     ftAvg+=(Math.min(50,Math.max(4,dt))-ftAvg)*0.08;
     skipN=ftAvg>27?3:ftAvg>21?2:1;
-    if(state==="idle"&&now>=AUTO_MS) play();
     ctx.clearRect(0,0,W,H);
 
     var i;
@@ -1427,17 +1406,46 @@ window.addEventListener("hashchange",function(){ showPage(location.hash.replace(
       spawnMeteor();setTimeout(spawnMeteor,220);setTimeout(spawnMeteor,480);
     },900);
   }
-  function play(){
+  /* 进站口令：点月亮 → 输对口令 → 满月仪式 → 揭开结缘 */
+  var PASS="1011"; // 进站口令（想改就改引号里的字）
+  function showPass(){
     if(done||state!=="idle") return;
+    state="pass";
+    intro.classList.add("pass");
+    var ip=document.getElementById("introPassInput");
+    if(ip) setTimeout(function(){ ip.focus(); },120);
+  }
+  function tryPass(){
+    if(done||state!=="pass") return;
+    var v=document.getElementById("introPassInput");
+    var val=v?v.value.trim():"";
+    if(val===PASS){
+      document.getElementById("introPassErr").textContent="";
+      startCeremony();
+    }else{
+      intro.classList.add("pass-err");
+      document.getElementById("introPassErr").textContent="口令不对，再想想～";
+      setTimeout(function(){ intro.classList.remove("pass-err"); },900);
+    }
+  }
+  function startCeremony(){
+    intro.classList.remove("pass","pass-err");
     intro.classList.add("playing");
     state="zoom";t0=performance.now();ripple=t0+150;
+    setTimeout(finish,3450);
   }
-  intro.addEventListener("click",function(){ play(); });
-  document.getElementById("introSkip").addEventListener("click",finish);
+  intro.addEventListener("click",function(){ if(state==="idle") showPass(); });
+  var ipEl=document.getElementById("introPassInput");
+  if(ipEl){
+    ipEl.addEventListener("keydown",function(e){
+      if(e.key==="Enter"){ e.preventDefault(); tryPass(); }
+      e.stopPropagation();
+    });
+    ipEl.addEventListener("click",function(e){ e.stopPropagation(); });
+  }
   document.addEventListener("keydown",function(e){
     if(done) return;
-    if(e.key==="Enter"||e.key===" "){ play(); }
-    else if(e.key==="Escape"){ finish(); }
+    if(state==="pass"&&e.key==="Escape"){ state="idle"; intro.classList.remove("pass","pass-err"); }
   });
 })();
 
@@ -2353,3 +2361,4 @@ showPage(location.hash.replace("#","")||"letter");
 </script>
 </body>
 </html>
+
