@@ -1,0 +1,41 @@
+TO YY · 月亮小站 —— 部署上线指南（手机随时访问）
+════════════════════════════════════════════════
+部署后你们俩的手机随时随地都能打开，不用开电脑。
+全程免费，大约 10 分钟。建议先做「云端同步指南.txt」。
+
+第一步：注册 GitHub
+1. 打开 https://github.com → Sign up，用邮箱注册
+
+第二步：把网站传上去
+1. 登录后点右上角「+」→「New repository」
+2. Repository name 填：moon-site
+   保持 Public → 点「Create repository」
+3. 新页面里找到「uploading an existing file」这行蓝字，点它
+4. 打开 moon-site 文件夹，把里面【所有文件和文件夹】
+   一起拖进网页（注意：是文件夹里的内容，不是文件夹本身）
+   包括：index.html、captions.js、timeline.js、moon-config.js、
+        server.py、启动小站.bat、assets、stories、各 txt
+5. 页面拉到最下面，点绿色按钮「Commit changes」
+
+第三步：开启 Pages（变成网址）
+1. 仓库页面上方点「Settings」→ 左侧点「Pages」
+2. 「Branch」下拉选 main → 点「Save」
+3. 等 1-2 分钟刷新这个页面，顶部会出现你的网址：
+   https://你的用户名.github.io/moon-site/
+4. 用手机浏览器打开这个网址 —— 月亮小站就在手机上了
+   （微信里发给她的就是这条链接）
+
+以后更新内容
+· 改本地文件后，回到仓库页面：
+  点对应文件 → 右上角铅笔图标编辑，或「Add file → Upload files」
+  拖新文件覆盖，再 Commit changes，1 分钟后网上就是新版
+· 手账新文章：除了上传 txt 到 stories，
+  还要编辑 stories/list.txt，在里面加一行新文件名
+  （本地用「启动小站.bat」时不需要 list.txt，网上需要）
+
+手机上只有这些差异
+· 手账、moon-letters.txt 自动读取：网上版正常
+· 开场动画、照片、时序、月记、愿望：全部正常
+· 信箱：配了云端就双向同步；没配云端就各存各的
+
+遇到问题随时回来找我
