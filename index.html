@@ -1408,7 +1408,7 @@ window.addEventListener("hashchange",function(){ showPage(location.hash.replace(
     },900);
   }
   /* 进站口令：点月亮 → 输对口令 → 满月仪式 → 揭开结缘 */
-  var PASS="1011"; // 进站口令（想改就改引号里的字）
+  var PASS="1012"; // 进站口令（想改就改引号里的字）
   function showPass(){
     if(done||state!=="idle") return;
     state="pass";
@@ -1992,6 +1992,11 @@ document.getElementById("videoReload").addEventListener("click",function(){ load
       var info={img:"",t:"新的回忆",s:""};
       if(d&&d.charAt(0)==="{"){ try{ var o=JSON.parse(d); info.img=o.img||""; info.t=o.t||info.t; info.s=o.s||""; }catch(e){ info.img=d; } }
       else info.img=d||"";
+      /* captions.js 里配了 photo-add 的文案就用它（本机没改过标题时） */
+      if(info.t==="新的回忆"&&!info.s){
+        var cp=null; try{ cp=window.CAPTIONS&&window.CAPTIONS[key]; }catch(e){}
+        if(Array.isArray(cp)&&cp.length){ info.t=cp[0]||info.t; info.s=cp[1]||""; }
+      }
       var fig=gal.querySelector('[data-key="'+key+'"]');
       if(!fig){
         var count=gal.querySelectorAll(".polar").length;
